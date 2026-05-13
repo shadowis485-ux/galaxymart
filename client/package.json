@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "prebuild": "node -e \"const fs=require('fs'),path=require('path');const link=path.resolve('../artifacts/dragonzstore/node_modules');const target=path.resolve('node_modules');try{fs.symlinkSync(target,link,'dir')}catch(e){}\"",
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview"
