@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: galaxymart
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@dragonzstore.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: NOWPAYMENTS_API_KEY
+        sync: false
+      - key: NOWPAYMENTS_IPN_SECRET
+        sync: false
+      - key: LTC_WALLET_ADDRESS
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: BASE_URL
+        sync: false
+    disk:
+      name: dragonzstore-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

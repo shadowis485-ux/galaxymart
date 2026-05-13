@@ -1,0 +1,25 @@
+node_modules/
+client/node_modules/
+
+# Database — never commit data files
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets — never commit
+.env
+
+# Build output (built fresh on Render)
+client/dist/
+client/.vite/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
