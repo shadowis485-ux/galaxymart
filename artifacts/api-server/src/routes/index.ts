@@ -8,6 +8,7 @@ import paymentsRouter from "./payments";
 import reviewsRouter from "./reviews";
 import stockRouter from "./stock";
 import ltcRouter from "./ltc";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/payments",   paymentsRouter);
 router.use("/reviews",    reviewsRouter);
 router.use("/stock",      stockRouter);
 router.use("/ltc",        ltcRouter);
+router.use("/settings",   settingsRouter);
 
 export default router;
