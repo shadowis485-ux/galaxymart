@@ -1,8 +1,9 @@
 import axios from 'axios';
+import localStore from './localStore';
 
 const BASE_URL = (import.meta.env.VITE_API_URL || '') + '/api';
 
-const api = axios.create({ baseURL: BASE_URL, timeout: 15000 });
+const api = axios.create({ baseURL: BASE_URL, timeout: 8000 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('admin_token');
@@ -20,74 +21,220 @@ api.interceptors.response.use(
     ),
 );
 
+const isNetworkOrNotFound = (err: any) => {
+  const msg = err?.message || '';
+  return (
+    msg.includes('404') ||
+    msg.includes('Network Error') ||
+    msg.includes('ERR_') ||
+    msg.includes('timeout') ||
+    msg.includes('network') ||
+    err?.code === 'ERR_NETWORK' ||
+    err?.code === 'ECONNREFUSED'
+  );
+};
+
+async function tryApi<T>(call: () => Promise<T>, fallback: () => T): Promise<T> {
+  try {
+    return await call();
+  } catch (err: any) {
+    if (isNetworkOrNotFound(err)) {
+      try { return fallback(); } catch (fbErr: any) { throw new Error(fbErr.message || String(fbErr)); }
+    }
+    throw err;
+  }
+}
+
 export const productsApi = {
-  getAll: (params?: any) => api.get('/products', { params }),
-  getById: (id: number) => api.get(`/products/${id}`),
-  getStats: () => api.get('/products/stats'),
+  getAll: (params?: any) =>
+    tryApi(
+      () => api.get('/products', { params }),
+      () => localStore.getProducts(params),
+    ),
+  getById: (id: number) =>
+    tryApi(
+      () => api.get(`/products/${id}`),
+      () => { const p = localStore.getProduct(id); if (!p) throw new Error('Product not found'); return p; },
+    ),
+  getStats: () =>
+    tryApi(
+      () => api.get('/products/stats'),
+      () => localStore.getProductStats(),
+    ),
   create: (data: FormData) =>
-    api.post('/products', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    tryApi(
+      () => api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+      () => localStore.createProduct(data),
+    ),
   update: (id: number, data: FormData) =>
-    api.put(`/products/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  delete: (id: number) => api.delete(`/products/${id}`),
+    tryApi(
+      () => api.put(`/products/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+      () => localStore.updateProduct(id, data),
+    ),
+  delete: (id: number) =>
+    tryApi(
+      () => api.delete(`/products/${id}`),
+      () => localStore.deleteProduct(id),
+    ),
 };
 
 export const categoriesApi = {
-  getAll: () => api.get('/categories'),
-  create: (data: any) => api.post('/categories', data),
-  delete: (id: number) => api.delete(`/categories/${id}`),
+  getAll: () =>
+    tryApi(
+      () => api.get('/categories'),
+      () => localStore.getCategories(),
+    ),
+  create: (data: any) =>
+    tryApi(
+      () => api.post('/categories', data),
+      () => localStore.createCategory(data),
+    ),
+  delete: (id: number) =>
+    tryApi(
+      () => api.delete(`/categories/${id}`),
+      () => localStore.deleteCategory(id),
+    ),
 };
 
 export const ordersApi = {
   create: (data: any) => api.post('/orders', data),
-  getStatus: (orderId: string) => api.get(`/orders/status/${orderId}`),
-  getAll: (params?: any) => api.get('/orders', { params }),
-  getAnalytics: () => api.get('/orders/analytics'),
-  search: (q: string) => api.get('/orders/search', { params: { q } }),
-  getDetail: (orderId: string) => api.get(`/orders/detail/${orderId}`),
+  getStatus: (orderId: string) =>
+    tryApi(
+      () => api.get(`/orders/status/${orderId}`),
+      () => { throw new Error('Order tracking requires a backend connection'); },
+    ),
+  getAll: (params?: any) =>
+    tryApi(
+      () => api.get('/orders', { params }),
+      () => localStore.getOrders(params),
+    ),
+  getAnalytics: () =>
+    tryApi(
+      () => api.get('/orders/analytics'),
+      () => localStore.getAnalytics(),
+    ),
+  search: (q: string) =>
+    tryApi(
+      () => api.get('/orders/search', { params: { q } }),
+      () => localStore.searchOrders(q),
+    ),
+  getDetail: (orderId: string) =>
+    tryApi(
+      () => api.get(`/orders/detail/${orderId}`),
+      () => { throw new Error('Order detail requires a backend connection'); },
+    ),
 };
 
 export const reviewsApi = {
-  getAll: () => api.get('/reviews'),
-  create: (data: any) => api.post('/reviews', data),
-  delete: (id: number) => api.delete(`/reviews/${id}`),
+  getAll: () =>
+    tryApi(
+      () => api.get('/reviews'),
+      () => localStore.getReviews(),
+    ),
+  create: (data: any) =>
+    tryApi(
+      () => api.post('/reviews', data),
+      () => localStore.createReview(data),
+    ),
+  delete: (id: number) =>
+    tryApi(
+      () => api.delete(`/reviews/${id}`),
+      () => localStore.deleteReview(id),
+    ),
 };
 
 export const stockApi = {
-  add: (data: any) => api.post('/stock/add', data),
+  add: (data: any) =>
+    tryApi(
+      () => api.post('/stock/add', data),
+      () => localStore.addStock(data),
+    ),
   getByProduct: (productId: string | number) =>
-    api.get(`/stock/${productId}`),
-  delete: (id: number) => api.delete(`/stock/${id}`),
+    tryApi(
+      () => api.get(`/stock/${productId}`),
+      () => localStore.getStockByProduct(productId),
+    ),
+  delete: (id: number) =>
+    tryApi(
+      () => api.delete(`/stock/${id}`),
+      () => localStore.deleteStockItem(id),
+    ),
 };
 
 export const authApi = {
   login: ({ password }: { password: string }) =>
-    api.post('/auth/login', { password }),
-  me: () => api.get('/auth/me'),
+    tryApi(
+      () => api.post('/auth/login', { password }),
+      () => {
+        const result = localStore.login(password);
+        if (!result) throw new Error('Wrong admin password');
+        return result;
+      },
+    ),
+  me: () =>
+    tryApi(
+      () => api.get('/auth/me'),
+      () => {
+        const admin = localStore.getAdmin();
+        const token = localStorage.getItem('admin_token');
+        if (!token || !admin.email) throw new Error('Not authenticated');
+        return { admin: { role: 'admin', email: admin.email } };
+      },
+    ),
 };
 
 export const paymentsApi = {
   mockConfirm: (orderId: string) =>
-    api.post(`/payments/mock-confirm/${orderId}`),
+    tryApi(
+      () => api.post(`/payments/mock-confirm/${orderId}`),
+      () => { throw new Error('Payments require a backend connection'); },
+    ),
 };
 
 export const ltcApi = {
-  getActive: () => api.get('/ltc/active'),
-  getAll: () => api.get('/ltc'),
-  add: (data: any) => api.post('/ltc', data),
-  activate: (id: number) => api.put(`/ltc/${id}/activate`),
-  delete: (id: number) => api.delete(`/ltc/${id}`),
+  getActive: () =>
+    tryApi(
+      () => api.get('/ltc/active'),
+      () => localStore.getActiveLtc(),
+    ),
+  getAll: () =>
+    tryApi(
+      () => api.get('/ltc'),
+      () => localStore.getLtcAddresses(),
+    ),
+  add: (data: any) =>
+    tryApi(
+      () => api.post('/ltc', data),
+      () => localStore.addLtcAddress(data),
+    ),
+  activate: (id: number) =>
+    tryApi(
+      () => api.put(`/ltc/${id}/activate`),
+      () => localStore.activateLtcAddress(id),
+    ),
+  delete: (id: number) =>
+    tryApi(
+      () => api.delete(`/ltc/${id}`),
+      () => localStore.deleteLtcAddress(id),
+    ),
 };
 
 export const settingsApi = {
-  get: () => api.get('/settings'),
+  get: () =>
+    tryApi(
+      () => api.get('/settings'),
+      () => localStore.getSettings(),
+    ),
   update: (data: { store_name?: string; logo_url?: string; store_tagline?: string }) =>
-    api.put('/settings', data),
+    tryApi(
+      () => api.put('/settings', data),
+      () => localStore.updateSettings(data),
+    ),
   changePassword: (data: { current_password: string; new_password: string }) =>
-    api.put('/settings/password', data),
+    tryApi(
+      () => api.put('/settings/password', data),
+      () => localStore.changePassword(data.current_password, data.new_password),
+    ),
 };
 
 export default api;
