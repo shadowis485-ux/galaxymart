@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 
-// On Vercel/Lambda the filesystem is read-only except /tmp — auto-detect.
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR =
   process.env.DATA_DIR ||
@@ -28,6 +27,15 @@ export function get(sql: string, params: any[] = []) {
 
 export function all(sql: string, params: any[] = []) {
   return db.prepare(sql).all(...params) as any[];
+}
+
+export function getSetting(key: string): string | null {
+  const row = get('SELECT value FROM settings WHERE key = ?', [key]);
+  return row ? row.value : null;
+}
+
+export function setSetting(key: string, value: string) {
+  run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP', [key, value]);
 }
 
 export function init() {
@@ -115,6 +123,12 @@ export function init() {
       password TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   migrate();
@@ -136,9 +150,17 @@ function seedData() {
   if (!adminExists) {
     const password = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10);
     run('INSERT INTO admins (email, password) VALUES (?, ?)', [
-      process.env.ADMIN_EMAIL || 'admin@dragonzstore.com', password
+      process.env.ADMIN_EMAIL || 'admin@galaxymart.com', password
     ]);
     console.log('✅ Admin created');
+  }
+
+  const settingExists = get("SELECT key FROM settings WHERE key = 'store_name'");
+  if (!settingExists) {
+    run("INSERT OR IGNORE INTO settings (key, value) VALUES ('store_name', 'Galaxymart')");
+    run("INSERT OR IGNORE INTO settings (key, value) VALUES ('logo_url', '')");
+    run("INSERT OR IGNORE INTO settings (key, value) VALUES ('store_tagline', 'Premium digital products delivered instantly.')");
+    console.log('✅ Default settings created');
   }
 
   const catExists = get('SELECT id FROM categories LIMIT 1');
