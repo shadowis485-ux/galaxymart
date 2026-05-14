@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { settingsApi } from './api';
+import localStore from './localStore';
+
+localStore.init();
 
 interface StoreSettings {
   store_name: string;
