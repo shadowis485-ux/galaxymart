@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, Tag, FileText, Star, LogOut, Plus, Trash2, Edit,
   TrendingUp, DollarSign, Clock, X, RefreshCw, Bitcoin, AlertTriangle, Layers,
-  Search, Settings, ChevronRight, Check, Eye, Minus, Menu, Copy, Mail, Calendar,
-  CreditCard
+  Search, Settings, ChevronRight, Check, Eye, Menu, Copy, Save, Key, Globe, Image as ImageIcon
 } from 'lucide-react';
-import { productsApi, categoriesApi, ordersApi, reviewsApi, stockApi, ltcApi } from '../lib/api';
+import { productsApi, categoriesApi, ordersApi, reviewsApi, stockApi, ltcApi, settingsApi } from '../lib/api';
+import { useStore } from '../lib/StoreContext';
 import { useLocation } from 'wouter';
 import toast from 'react-hot-toast';
 
@@ -113,6 +113,20 @@ function EmptyState({ icon: Icon, text, sub }: any) {
   );
 }
 
+function SettingsSection({ title, icon: Icon, children }: any) {
+  return (
+    <div className="glass-card p-5 md:p-6">
+      <div className="flex items-center gap-2 mb-5 pb-4 border-b border-white/5">
+        <div className="w-8 h-8 rounded-lg bg-neon-500/10 flex items-center justify-center">
+          <Icon size={15} className="text-neon-500" />
+        </div>
+        <h3 className="text-white font-semibold text-sm">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [tab, setTab]               = useState('dashboard');
   const [analytics, setAnalytics]   = useState<any>(null);
@@ -134,6 +148,22 @@ export default function AdminDashboard() {
   const searchTimeout = useRef<any>(null);
   const adminEmail = localStorage.getItem('admin_email') || 'admin';
   const [, navigate] = useLocation();
+  const { settings: storeSettings, refresh: refreshStore } = useStore();
+
+  const [storeForm, setStoreForm]     = useState({ store_name: '', logo_url: '', store_tagline: '' });
+  const [storeSaving, setStoreSaving] = useState(false);
+  const [pwForm, setPwForm]           = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pwSaving, setPwSaving]       = useState(false);
+
+  useEffect(() => {
+    if (tab === 'settings') {
+      setStoreForm({
+        store_name:    storeSettings.store_name || '',
+        logo_url:      storeSettings.logo_url   || '',
+        store_tagline: storeSettings.store_tagline || '',
+      });
+    }
+  }, [tab, storeSettings]);
 
   const logout = () => {
     localStorage.removeItem('admin_token');
@@ -360,13 +390,47 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleStoreSave = async (e: any) => {
+    e.preventDefault();
+    setStoreSaving(true);
+    try {
+      await settingsApi.update(storeForm);
+      await refreshStore();
+      toast.success('Store settings saved!');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setStoreSaving(false); }
+  };
+
+  const handlePasswordChange = async (e: any) => {
+    e.preventDefault();
+    if (!pwForm.current_password || !pwForm.new_password) { toast.error('All fields required'); return; }
+    if (pwForm.new_password !== pwForm.confirm_password) { toast.error('Passwords do not match'); return; }
+    if (pwForm.new_password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    setPwSaving(true);
+    try {
+      await settingsApi.changePassword({ current_password: pwForm.current_password, new_password: pwForm.new_password });
+      toast.success('Password changed! Please log in again.');
+      setPwForm({ current_password:'', new_password:'', confirm_password:'' });
+      setTimeout(() => {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        navigate('/admin/login');
+      }, 1500);
+    } catch (err: any) { toast.error(err.message); }
+    finally { setPwSaving(false); }
+  };
+
   return (
     <div className="min-h-screen flex bg-[#050505]">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-56 bg-[#070707] border-r border-neon-500/10 flex flex-col transition-transform duration-300 ${sideOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="p-5 border-b border-neon-500/10">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🐉</span>
+            {storeSettings.logo_url ? (
+              <img src={storeSettings.logo_url} alt="logo" className="w-6 h-6 object-contain rounded" />
+            ) : (
+              <span className="text-xl">🌌</span>
+            )}
             <div>
               <p className="text-neon-500 font-mono text-xs font-bold tracking-wider">ADMIN</p>
               <p className="text-gray-600 text-[10px] truncate">{adminEmail}</p>
@@ -492,7 +556,7 @@ export default function AdminDashboard() {
                           <tr key={p.id}>
                             <td>
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-neon-500/5 border border-neon-500/10 flex items-center justify-center overflow-hidden">
+                                <div className="w-9 h-9 rounded-lg bg-neon-500/5 border border-neon-500/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                                   {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover"/> : <Package size={14} className="text-neon-500/30"/>}
                                 </div>
                                 <div>
@@ -663,9 +727,81 @@ export default function AdminDashboard() {
           {/* SETTINGS */}
           {tab === 'settings' && (
             <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-display font-bold text-white">LTC <span className="gold-text">Addresses</span></h2>
+              <h2 className="text-xl font-display font-bold text-white">Store <span className="gold-text">Settings</span></h2>
+
+              {/* Store branding */}
+              <SettingsSection title="Store Branding" icon={Globe}>
+                <form onSubmit={handleStoreSave} className="space-y-4">
+                  <Input
+                    label="Store Name"
+                    value={storeForm.store_name}
+                    onChange={(e: any) => setStoreForm(f => ({...f, store_name: e.target.value}))}
+                    placeholder="Galaxymart"
+                  />
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1.5 block">Logo URL (supports PNG, SVG, GIF)</label>
+                    <input
+                      type="url"
+                      value={storeForm.logo_url}
+                      onChange={(e: any) => setStoreForm(f => ({...f, logo_url: e.target.value}))}
+                      placeholder="https://example.com/logo.png"
+                      className="input-gold w-full px-4 py-3 text-sm"
+                    />
+                    {storeForm.logo_url && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <img src={storeForm.logo_url} alt="Logo preview" className="w-10 h-10 object-contain rounded-lg border border-white/10 bg-white/5" onError={e => (e.currentTarget.style.display='none')}/>
+                        <p className="text-gray-500 text-xs">Logo preview</p>
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    label="Store Tagline"
+                    value={storeForm.store_tagline}
+                    onChange={(e: any) => setStoreForm(f => ({...f, store_tagline: e.target.value}))}
+                    placeholder="Premium digital products delivered instantly."
+                  />
+                  <button type="submit" disabled={storeSaving} className="btn-gold w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                    {storeSaving ? <RefreshCw size={15} className="animate-spin"/> : <Save size={15}/>}
+                    Save Branding
+                  </button>
+                </form>
+              </SettingsSection>
+
+              {/* Change Password */}
+              <SettingsSection title="Change Admin Password" icon={Key}>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <Input
+                    label="Current Password"
+                    type="password"
+                    value={pwForm.current_password}
+                    onChange={(e: any) => setPwForm(f => ({...f, current_password: e.target.value}))}
+                    placeholder="Enter current password"
+                  />
+                  <Input
+                    label="New Password"
+                    type="password"
+                    value={pwForm.new_password}
+                    onChange={(e: any) => setPwForm(f => ({...f, new_password: e.target.value}))}
+                    placeholder="Min. 6 characters"
+                  />
+                  <Input
+                    label="Confirm New Password"
+                    type="password"
+                    value={pwForm.confirm_password}
+                    onChange={(e: any) => setPwForm(f => ({...f, confirm_password: e.target.value}))}
+                    placeholder="Repeat new password"
+                  />
+                  <p className="text-gray-600 text-xs">After changing, you will be logged out automatically.</p>
+                  <button type="submit" disabled={pwSaving} className="btn-gold w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                    {pwSaving ? <RefreshCw size={15} className="animate-spin"/> : <Key size={15}/>}
+                    Change Password
+                  </button>
+                </form>
+              </SettingsSection>
+
+              {/* LTC Addresses */}
+              <SettingsSection title="LTC Wallet Addresses" icon={Bitcoin}>
+                <div className="flex justify-end mb-4">
                   <button onClick={() => setModal('ltc')} className="btn-gold flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold">
                     <Plus size={14}/> Add Address
                   </button>
@@ -674,7 +810,7 @@ export default function AdminDashboard() {
                   ? <EmptyState icon={Bitcoin} text="No LTC addresses" sub="Add a wallet address to receive payments"/>
                   : <div className="space-y-3">
                       {ltcAddresses.map((addr: any) => (
-                        <div key={addr.id} className="glass-card p-4 flex items-center justify-between gap-4">
+                        <div key={addr.id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${addr.is_active ? 'bg-neon-500 animate-pulse' : 'bg-gray-600'}`}/>
                             <div className="min-w-0">
@@ -690,17 +826,15 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                 }
-              </div>
+              </SettingsSection>
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-display font-bold text-white">Customer <span className="gold-text">Reviews</span></h2>
-                </div>
+              {/* Reviews */}
+              <SettingsSection title="Customer Reviews" icon={Star}>
                 {reviews.length === 0
                   ? <EmptyState icon={Star} text="No reviews yet"/>
                   : <div className="space-y-3">
                       {reviews.map((r: any) => (
-                        <div key={r.id} className="glass-card p-4 flex items-start justify-between gap-4">
+                        <div key={r.id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-white text-sm font-medium">{r.customer_name}</span>
@@ -713,7 +847,7 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                 }
-              </div>
+              </SettingsSection>
             </div>
           )}
 
@@ -737,11 +871,38 @@ export default function AdminDashboard() {
                 <option value="">No category</option>
                 {categories.map((c: any) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
               </Select>
-              <div>
-                <label className="text-gray-400 text-sm mb-1.5 block">Product Image</label>
-                <input type="file" accept="image/*" onChange={e => setProdImage(e.target.files?.[0] || null)} className="text-gray-400 text-sm w-full"/>
-                {prodForm.image_url && !prodImage && <p className="text-gray-600 text-xs mt-1">Current: {prodForm.image_url}</p>}
+
+              {/* Image section */}
+              <div className="space-y-3 p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+                <div className="flex items-center gap-2 mb-2">
+                  <ImageIcon size={13} className="text-gray-500"/>
+                  <span className="text-gray-400 text-sm font-medium">Product Image</span>
+                </div>
+                <div>
+                  <label className="text-gray-500 text-xs mb-1.5 block">Image URL (supports GIF / animated)</label>
+                  <input
+                    type="url"
+                    value={prodForm.image_url}
+                    onChange={(e: any) => setProdForm((f: any) => ({...f, image_url: e.target.value}))}
+                    placeholder="https://example.com/product.gif"
+                    className="input-gold w-full px-4 py-3 text-sm"
+                  />
+                  {prodForm.image_url && (
+                    <div className="mt-2">
+                      <img src={prodForm.image_url} alt="Preview" className="h-16 w-auto rounded-lg border border-white/10 object-contain bg-white/5" onError={e => (e.currentTarget.style.display='none')}/>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-gray-600 text-xs">
+                  <span>— or —</span>
+                </div>
+                <div>
+                  <label className="text-gray-500 text-xs mb-1.5 block">Upload image file (overrides URL above)</label>
+                  <input type="file" accept="image/*,image/gif" onChange={e => setProdImage(e.target.files?.[0] || null)} className="text-gray-400 text-sm w-full"/>
+                  {prodImage && <p className="text-neon-500 text-xs mt-1">✓ {prodImage.name}</p>}
+                </div>
               </div>
+
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
                   <input type="checkbox" checked={prodForm.featured} onChange={e => setProdForm((f: any) => ({...f, featured: e.target.checked}))} className="rounded"/>
