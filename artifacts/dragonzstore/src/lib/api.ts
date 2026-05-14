@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-// In production (Vercel), point to the API serverless function.
-// VITE_API_URL lets you override with an external API host if needed.
 const BASE_URL = (import.meta.env.VITE_API_URL || '') + '/api';
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 15000 });
@@ -82,6 +80,14 @@ export const ltcApi = {
   add: (data: any) => api.post('/ltc', data),
   activate: (id: number) => api.put(`/ltc/${id}/activate`),
   delete: (id: number) => api.delete(`/ltc/${id}`),
+};
+
+export const settingsApi = {
+  get: () => api.get('/settings'),
+  update: (data: { store_name?: string; logo_url?: string; store_tagline?: string }) =>
+    api.put('/settings', data),
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.put('/settings/password', data),
 };
 
 export default api;
