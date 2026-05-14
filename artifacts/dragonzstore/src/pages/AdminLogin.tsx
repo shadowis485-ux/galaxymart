@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Shield, X } from 'lucide-react';
 import { authApi } from '../lib/api';
+import { useStore } from '../lib/StoreContext';
 import { useLocation } from 'wouter';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [, navigate] = useLocation();
+  const { settings } = useStore();
+  const storeName = settings.store_name || 'Galaxymart';
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -34,9 +37,13 @@ export default function AdminLogin() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }} className="text-6xl mb-4 block select-none">🐉</motion.div>
+          <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }} className="text-6xl mb-4 block select-none">
+            {settings.logo_url ? (
+              <img src={settings.logo_url} alt={storeName} className="w-16 h-16 object-contain rounded-xl mx-auto" />
+            ) : '🌌'}
+          </motion.div>
           <h1 className="text-3xl font-display font-bold text-white mb-1">Admin <span className="gold-text">Access</span></h1>
-          <p className="text-gray-500 text-sm">DragonzStore control panel</p>
+          <p className="text-gray-500 text-sm">{storeName} control panel</p>
         </div>
 
         <div className="glass-card p-7">
