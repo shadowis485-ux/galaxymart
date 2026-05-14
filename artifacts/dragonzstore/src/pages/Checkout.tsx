@@ -5,6 +5,7 @@ import { useCart } from '../lib/cart';
 import { ordersApi, paymentsApi } from '../lib/api';
 import { useLocation } from 'wouter';
 import toast from 'react-hot-toast';
+import { fmtLTC } from '../lib/utils';
 
 const STATUS_INFO: any = {
   pending:    { label: 'Waiting for Payment',  color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/30', icon: Clock },
@@ -239,14 +240,14 @@ export default function Checkout() {
                   <p className="text-white text-xs font-medium truncate">{item.name}</p>
                   <p className="text-gray-500 text-xs">x{item.quantity}</p>
                 </div>
-                <p className="text-neon-500 text-xs font-bold flex-shrink-0">${(item.price * item.quantity).toFixed(2)}</p>
+                <p className="text-neon-500 text-xs font-bold flex-shrink-0 font-mono">{fmtLTC(item.price * item.quantity)}</p>
               </div>
             ))}
           </div>
           <div className="border-t border-white/10 pt-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-300 text-sm">Total</span>
-              <span className="text-xl font-bold gold-text">${total.toFixed(2)}</span>
+              <span className="text-xl font-bold gold-text font-mono">{fmtLTC(total)}</span>
             </div>
             <p className="text-gray-600 text-xs mt-1">≈ {order?.payment?.pay_amount || '...'} LTC</p>
           </div>
