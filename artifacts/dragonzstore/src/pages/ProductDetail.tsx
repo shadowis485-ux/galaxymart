@@ -5,6 +5,7 @@ import { productsApi } from '../lib/api';
 import { useCart } from '../lib/cart';
 import { useLocation, useParams } from 'wouter';
 import toast from 'react-hot-toast';
+import { fmtLTC } from '../lib/utils';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -111,7 +112,7 @@ export default function ProductDetail() {
             <div className="flex items-end justify-between mb-2">
               <div>
                 <span className="text-gray-500 text-sm block mb-1">Price</span>
-                <span className="text-4xl font-bold text-neon-500 font-mono">${product.price.toFixed(2)}</span>
+                <span className="text-4xl font-bold text-neon-500 font-mono">{fmtLTC(product.price)}</span>
               </div>
               <div className="text-right">
                 <span className={`text-sm font-medium px-3 py-1 rounded-full ${inStock ? 'text-neon-500 bg-neon-500/10 border border-neon-500/25' : 'text-red-400 bg-red-400/10 border border-red-400/25'}`}>
@@ -157,7 +158,7 @@ export default function ProductDetail() {
                   </button>
                 </div>
                 <span className="text-gray-600 text-sm">
-                  Total: <span className="text-neon-500 font-bold font-mono">${(product.price * quantity).toFixed(2)}</span>
+                  Total: <span className="text-neon-500 font-bold font-mono">{fmtLTC(product.price * quantity)}</span>
                 </span>
               </div>
             </div>
