@@ -3,6 +3,7 @@ import { ShoppingCart, Package, Zap } from 'lucide-react';
 import { useCart } from '../lib/cart';
 import { useLocation } from 'wouter';
 import toast from 'react-hot-toast';
+import { fmtLTC } from '../lib/utils';
 
 interface ProductCardProps {
   product: any;
@@ -63,8 +64,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         )}
 
         <div className="absolute bottom-2 left-2">
-          <span className="price-badge px-2 py-0.5 rounded text-sm font-bold">
-            ${product.price?.toFixed(2)}
+          <span className="price-badge px-2 py-0.5 rounded text-sm font-bold font-mono tracking-tight">
+            {fmtLTC(product.price)}
           </span>
         </div>
       </div>
