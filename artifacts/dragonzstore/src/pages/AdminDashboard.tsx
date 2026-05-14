@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { productsApi, categoriesApi, ordersApi, reviewsApi, stockApi, ltcApi, settingsApi } from '../lib/api';
 import { useStore } from '../lib/StoreContext';
+import { fmtLTC } from '../lib/utils';
 import { useLocation } from 'wouter';
 import toast from 'react-hot-toast';
 
@@ -99,6 +100,67 @@ function Select({ label, children, ...props }: any) {
     <div>
       {label && <label className="text-gray-400 text-sm mb-1.5 block">{label}</label>}
       <select className="input-gold w-full px-4 py-3 text-sm bg-transparent" {...props}>{children}</select>
+    </div>
+  );
+}
+
+function PriceInput({ label = 'Price (USD)', value, onChange, placeholder = '0.00' }: { label?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const parsed = value !== '' ? parseFloat(value) : NaN;
+  const isValid = value !== '' && !isNaN(parsed) && parsed >= 0;
+  const preview = isValid ? fmtLTC(parsed) : null;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace(/^\$+/, '').replace(/[^0-9.]/g, '');
+    const parts = v.split('.');
+    if (parts.length > 2) return;
+    if (parts[1] !== undefined && parts[1].length > 8) return;
+    onChange(v);
+  };
+
+  return (
+    <div>
+      <label className="text-gray-400 text-sm mb-1.5 block">{label}</label>
+      <div
+        className="relative flex items-center rounded-xl overflow-hidden transition-all duration-200"
+        style={{
+          background: 'linear-gradient(135deg, rgba(0,255,65,0.04) 0%, rgba(0,0,0,0.6) 100%)',
+          border: isValid ? '1px solid rgba(0,255,65,0.4)' : '1px solid rgba(0,255,65,0.12)',
+          boxShadow: isValid ? '0 0 18px rgba(0,255,65,0.08), inset 0 0 12px rgba(0,255,65,0.03)' : 'none',
+        }}
+      >
+        <div className="flex items-center justify-center pl-4 pr-2 border-r border-neon-500/20 select-none"
+          style={{ minWidth: 36, height: 48 }}>
+          <span className="text-neon-500 font-bold font-mono text-lg leading-none" style={{ textShadow: isValid ? '0 0 12px rgba(0,255,65,0.8)' : 'none' }}>$</span>
+        </div>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={value}
+          onChange={handleChange}
+          placeholder={placeholder}
+          className="flex-1 bg-transparent text-white font-mono text-base px-3 py-3 outline-none placeholder-gray-700"
+          style={{ letterSpacing: '0.06em' }}
+        />
+        <div
+          className="flex items-center gap-1 pr-4 pl-2 border-l border-neon-500/20 select-none"
+          style={{ height: 48 }}
+        >
+          <span
+            className="font-bold font-mono text-xs tracking-widest transition-all duration-300"
+            style={{ color: isValid ? 'rgba(0,255,65,0.9)' : 'rgba(255,255,255,0.12)', textShadow: isValid ? '0 0 10px rgba(0,255,65,0.6)' : 'none' }}
+          >LTC</span>
+        </div>
+      </div>
+      <div className="mt-1.5 h-5">
+        {preview ? (
+          <p className="text-xs font-mono flex items-center gap-1.5">
+            <span className="text-gray-600">→ Storefront:</span>
+            <span className="text-neon-500 font-bold" style={{ textShadow: '0 0 8px rgba(0,255,65,0.5)' }}>{preview}</span>
+          </p>
+        ) : value && !isValid ? (
+          <p className="text-xs text-red-400/70">Enter a valid number (e.g. 0.5, 9.99, 19)</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -565,7 +627,7 @@ export default function AdminDashboard() {
                                 </div>
                               </div>
                             </td>
-                            <td><span className="text-neon-500 font-bold">{fmt(p.price)}</span></td>
+                            <td><span className="text-neon-500 font-bold font-mono">{fmtLTC(p.price)}</span></td>
                             <td><span className={`text-sm font-medium ${p.stock_count > 0 ? 'text-green-400' : 'text-red-400'}`}>{p.stock_count}</span></td>
                             <td><span className={`text-xs px-2 py-0.5 rounded-full border ${p.is_active ? 'text-green-400 border-green-400/30 bg-green-400/5' : 'text-gray-500 border-gray-500/30'}`}>{p.is_active ? 'Active' : 'Hidden'}</span></td>
                             <td>
@@ -698,8 +760,8 @@ export default function AdminDashboard() {
                   <option value="">Select product...</option>
                   {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
-                <Input label="New price (USD)" type="number" step="0.01" min="0" value={priceForm.price}
-                  onChange={(e: any) => setPriceForm(f => ({...f, price: e.target.value}))} placeholder="e.g. 9.99"/>
+                <PriceInput label="New Price" value={priceForm.price}
+                  onChange={(v) => setPriceForm(f => ({...f, price: v}))} placeholder="e.g. 9.99"/>
                 <button type="submit" disabled={priceSaving} className="btn-gold w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
                   {priceSaving ? <RefreshCw size={15} className="animate-spin"/> : <Check size={15}/>}
                   Update Price
@@ -713,7 +775,7 @@ export default function AdminDashboard() {
                       {products.map((p: any) => (
                         <tr key={p.id}>
                           <td><span className="text-white text-sm">{p.name}</span></td>
-                          <td><span className="text-neon-500 font-bold">{fmt(p.price)}</span></td>
+                          <td><span className="text-neon-500 font-bold font-mono">{fmtLTC(p.price)}</span></td>
                           <td><button onClick={() => handleClearPrice(p)} className="text-xs text-gray-500 hover:text-red-400 transition-colors">Clear</button></td>
                         </tr>
                       ))}
@@ -864,7 +926,7 @@ export default function AdminDashboard() {
               <Textarea label="Description" rows={3} value={prodForm.description} onChange={(e: any) => setProdForm((f: any) => ({...f, description: e.target.value}))} placeholder="Product description"/>
               <Textarea label="Bullet Points (one per line)" rows={4} value={prodForm.bullet_points} onChange={(e: any) => setProdForm((f: any) => ({...f, bullet_points: e.target.value}))} placeholder="• Feature one&#10;• Feature two"/>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Price (USD)" type="number" step="0.01" min="0" value={prodForm.price} onChange={(e: any) => setProdForm((f: any) => ({...f, price: e.target.value}))} placeholder="9.99"/>
+                <PriceInput label="Price" value={String(prodForm.price ?? '')} onChange={(v) => setProdForm((f: any) => ({...f, price: v}))} placeholder="9.99"/>
                 <Input label="Initial Stock" type="number" min="0" value={prodForm.stock_count} onChange={(e: any) => setProdForm((f: any) => ({...f, stock_count: e.target.value}))}/>
               </div>
               <Select label="Category" value={prodForm.category_id} onChange={(e: any) => setProdForm((f: any) => ({...f, category_id: e.target.value}))}>
