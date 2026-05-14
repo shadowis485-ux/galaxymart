@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Menu, X, ChevronDown, LogIn, Star } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, LogIn } from 'lucide-react';
 import { useCart } from '../lib/cart';
+import { useStore } from '../lib/StoreContext';
 import { useLocation } from 'wouter';
 
 const navLinks = [
@@ -19,10 +20,13 @@ export default function Navbar() {
   const [currency, setCurrency] = useState('USD');
   const [showCurrency, setShowCurrency] = useState(false);
   const { count } = useCart();
+  const { settings } = useStore();
   const [location, navigate] = useLocation();
 
   const isActive = (href: string) =>
     href === '/' ? location === '/' : location.startsWith(href);
+
+  const storeName = settings.store_name || 'Galaxymart';
 
   return (
     <header className="navbar-blur sticky top-0 z-50">
@@ -35,11 +39,15 @@ export default function Navbar() {
             className="flex items-center gap-2.5 group"
             data-testid="logo-home"
           >
-            <div className="w-8 h-8 flex items-center justify-center">
-              <Star size={22} className="text-[#3b82f6] fill-[#3b82f6] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+            <div className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-lg">
+              {settings.logo_url ? (
+                <img src={settings.logo_url} alt={storeName} className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-xl">🌌</span>
+              )}
             </div>
-            <span className="font-display text-base font-bold tracking-widest text-white">
-              STAR <span className="text-[#60a5fa]">V3</span>
+            <span className="font-display text-base font-bold tracking-widest text-white uppercase">
+              {storeName}
             </span>
           </button>
 
