@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package } from 'lucide-react';
 import { useCart } from '../lib/cart';
 import { useLocation } from 'wouter';
+import { fmtLTC } from '../lib/utils';
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, total, clearCart } = useCart();
@@ -48,7 +49,7 @@ export default function Cart() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-white font-semibold text-sm mb-1 truncate">{item.name}</h3>
-                  <p className="text-neon-500 font-bold text-lg">${item.price.toFixed(2)}</p>
+                  <p className="text-neon-500 font-bold text-lg font-mono">{fmtLTC(item.price)}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex items-center gap-2 bg-white/5 rounded-lg border border-white/10">
                       <button onClick={() => updateQuantity(item.product_id, item.quantity - 1)} className="p-1.5 hover:text-neon-500 transition-colors" data-testid={`button-decrease-${item.product_id}`}>
@@ -65,7 +66,7 @@ export default function Cart() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-bold">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-white font-bold font-mono">{fmtLTC(item.price * item.quantity)}</p>
                 </div>
               </motion.div>
             ))}
@@ -82,14 +83,14 @@ export default function Cart() {
             {items.map((item: any) => (
               <div key={item.product_id} className="flex justify-between text-sm">
                 <span className="text-gray-400 truncate mr-2">{item.name} x{item.quantity}</span>
-                <span className="text-white font-medium flex-shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-white font-medium flex-shrink-0 font-mono">{fmtLTC(item.price * item.quantity)}</span>
               </div>
             ))}
           </div>
           <div className="border-t border-white/10 pt-4 mb-6">
             <div className="flex justify-between items-center">
               <span className="text-gray-300 font-medium">Total</span>
-              <span className="text-2xl font-bold gold-text">${total.toFixed(2)}</span>
+              <span className="text-2xl font-bold gold-text font-mono">{fmtLTC(total)}</span>
             </div>
             <p className="text-gray-600 text-xs mt-1">Paid in Litecoin (LTC)</p>
           </div>
