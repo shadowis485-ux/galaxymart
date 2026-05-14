@@ -1,15 +1,25 @@
+import { useStore } from '../lib/StoreContext';
+
 export default function Footer() {
+  const { settings } = useStore();
+  const storeName = settings.store_name || 'Galaxymart';
+  const tagline   = settings.store_tagline || 'Premium digital products delivered instantly.';
+
   return (
     <footer className="border-t border-neon-500/10 bg-[#050505] mt-20">
       <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">🐉</span>
-              <span className="font-mono text-sm font-bold text-neon-500">DRAGONZ<span className="text-white">STORE</span></span>
+              {settings.logo_url ? (
+                <img src={settings.logo_url} alt={storeName} className="w-6 h-6 object-contain rounded" />
+              ) : (
+                <span className="text-xl">🌌</span>
+              )}
+              <span className="font-mono text-sm font-bold text-neon-500 uppercase">{storeName}</span>
             </div>
             <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
-              Premium digital products delivered instantly. Secured by Litecoin payments.
+              {tagline} Secured by Litecoin payments.
             </p>
             <div className="flex items-center gap-2 mt-3">
               <div className="w-1.5 h-1.5 bg-neon-500 rounded-full animate-pulse" />
@@ -47,7 +57,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-white/5 pt-5 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-gray-700 text-xs font-mono">© 2024 DragonzStore. All rights reserved.</p>
+          <p className="text-gray-700 text-xs font-mono">© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
           <p className="text-gray-700 text-xs font-mono">Powered by LTC · Instant Delivery · 24/7</p>
         </div>
       </div>
